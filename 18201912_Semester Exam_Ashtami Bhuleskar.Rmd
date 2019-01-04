@@ -1,0 +1,176 @@
+---
+title: "18201912_Data Programming with R STAT40620 Semester Exam"
+author: "Ashtami Bhuleskar"
+date: "December 17, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Q1#
+
+##(a)##
+```{r}
+goodread_data<-load("goodreads.Rdata")
+nrow(goodreads)
+dim(goodreads)
+length(unique(goodreads$user_id))
+```
+
+There are 1048575 reviews in the data.
+There are 52927 different users in the dataset.
+
+
+##(b)##
+```{r}
+length(unique(goodreads$authors))
+goodreads$title[which.max(table(goodreads$title))]
+```
+There are 85 different book authors.
+"The Hunger Games (The Hunger Games, #1)" book was reviewed most often.
+
+##(c)##
+```{r}
+avg_rating <- aggregate(goodreads$rating, list(goodreads$title), mean)
+colnames(avg_rating) <- c("Book Title", "Average Rating")
+
+any(avg_rating$`Average Rating`==5) #first check if any book has received average rating of 5. After that only go for the count. since there are no book having avg rating as 5, we are not proceeding with the count.
+
+review1 <- data.frame(table(avg_rating$`Average Rating`>4)["TRUE"]) #Avg rating of at least 4
+
+length(review1$Var1[which(review1$Freq>=10000)]) #giving list of books having reviewed at least 10000 times
+```
+0 or None of the books got rating equal to 5.
+44 books were given an average rating of at least 4
+51 Books have been reviewed at least 10000 times
+
+
+##(d)##
+```{r}
+class(goodreads) <- 'bookratings'
+
+
+# create the S3 summary method 
+summary.bookratings <- function(goodreads){
+# calculate the summary statistics 
+  
+  avg_rated_authors <- aggregate(goodreads$rating, list(goodreads$authors), mean)
+  colnames(avg_rated_authors) <- c("Auhtor", "Average Rating")
+  
+  s <- avg_rated_authors[order(-avg_rated_authors$`Average Rating`),][1:10,]
+  
+  
+  avg_rated_books <- aggregate(goodreads$rating, list(goodreads$title), mean)
+  colnames(avg_rated_books) <- c("Title", "Average Rating")
+  
+  l <- avg_rated_books[order(-avg_rated_books$`Average Rating`),][1:10,]
+  
+  return(list(s,l))
+}
+# check the function on the Dublin airport dataset
+summary(goodreads)
+```
+Top 3 rated authors are:
+
+J.K. Rowling 4.391197
+Kathryn Stockett 4.382887
+Harper Lee 4.329369
+#________
+Top 3 rated books are:
+
+Harry Potter and the Deathly Hallows (Harry Potter, #7)
+4.525941
+
+Harry Potter and the Half-Blood Prince (Harry Potter, #6)
+4.443339
+
+Harry Potter and the Goblet of Fire (Harry Potter, #4)
+4.430780
+
+
+#2#
+
+##(b)##
+### (b) (i)###
+```{r}
+logistic_map <- function(x0, r, niter = 50){  #function logistic_map is defined which takes 3 arguments as input x0, r and niter
+  stopifnot(is.numeric(x0) & length(x0) == 1 & x0 >= 0 & x0 <= 1) #this is optional statement which deals with checking if the values are valid or not. x0 is tested against if numeric. length of x0 must be equal to 1, value of x0 should be between 0 and 1 both 0 and 1 being inclusive. logical and is used meaning even if one of the condition fails, the code stops. all conditions must be satisfied in order to proceed.
+  xt <- numeric(niter + 1) #xt is initialised having storage capacity equals to niter+1
+  xt[1] <- x0 #first value of xt is initialised as equal to x0
+  for(i in 1:niter) # for loop runs for niter number of times.
+    xt[i + 1] <- r * xt[i] * (1 - xt[i]) #computation of equation step
+  plot(xt, type = "b", xlab = "time") #plotting values of xt with label of x axis as "time"
+  return(xt) #return xt to the function caller.
+}    
+xt <- logistic_map(x0 = 0.3, r = 2.2)
+xt
+```
+
+##(b) (ii)##
+system.time: It returns CPU (and other) times that the function expression has used.It calls the function proc.time, evaluates expression, and then calls proc.time once more, returning the difference between the two proc.time calls.Timings of evaluations of the same expression can vary considerably depending on whether the evaluation triggers a garbage collection. When gcFirst is TRUE a garbage collection (gc) will be performed immediately before the evaluation of expr. This will usually produce more consistent timings.
+
+#____________
+
+Rprof: Enable or disable profiling of the execution of R expressions.Profiling R code gives you the chance to identify bottlenecks and pieces of code that needs to be more efficiently implemented.Rprof works by recording at fixed intervals (by default every 20 msecs) which R function is being used, and recording the results in a file. summaryRprof will give you a list with four elements:
+
+by.self: time spent in function alone.
+by.total: time spent in function and callees.
+sample.interval: the sampling interval, by default every 20 msecs.
+sampling.time: total time of profiling run. Remember that profiling does impose a small performance penalty.
+
+
+self.time:  how many seconds were spent in that function
+
+self.pct:   what percent is this of the overall time.  (These numbers 
+should total 100%, modulo rounding and truncation.)
+
+total.time: how many seconds were spent in that function or the 
+functions that it called
+
+total.pct:  what percentage this is of the total.  (These numbers will 
+typically total much more than 100%, because functions will be counted 
+for themselves, and for all the functions that call them.)
+
+So look at the functions you wrote that score high in total.pct, because 
+they are the ones where optimization will have an impact.  You may be 
+able to modify them to avoid calling some of the high cost functions 
+that you didn't write.
+
+[.data.frame is a known slow function.  If execution time matters to 
+you, don't use it.  Convert data frames to matrices, where indexing is 
+much faster.  In your case, this one change could possibly speed up 
+things by a factor of 2, because you're spending half the execution time 
+just indexing into data frames.
+
+One other piece of advice:  after you identify a possible change, make 
+it and redo the profiling.  [.data.frame calls so many other functions 
+that if you get rid of it you may drastically change the profile.
+
+```{r}
+system.time(for(i in 1:1000)logistic_map(x0 = 0.3, r = 2.2))
+
+Rprof()
+for(i in 1:1000)logistic_map(x0 = 0.3, r = 2.2)
+Rprof(NULL)
+summaryRprof()
+```
+Interpretation of the Output:
+By using System.time: The elapsed time required is 20.12
+
+By using Rprof: sampling time is 14.04
+
+
+##Q2 (a)##
+###(i)###
+```{r}
+turtle_data <- read.csv(file = "turtle.csv", head=TRUE,sep=",")
+
+par(mfrow = c(1, 3))
+boxplot(turtle_data$length ~ turtle_data$gender, xaxt = "n", main = "Length", col = 2:3, ylab = 'Length of Turtle', xlab = "Gender")
+boxplot(turtle_data$height ~ turtle_data$gender, xaxt = "n", main = "Height", col = 4:5, ylab = 'Height of Turtle', xlab = "Gender")
+boxplot(turtle_data$width ~ turtle_data$gender, xaxt = "n", main = "Width", col = 6:7, ylab = 'Width of Turtle', xlab = "Gender")
+```
+In all three plots, the values of length, Height and Width are significantly high for Female turtles than Male turtles. It would be even rightful to say that the lowest value in all 3 plots is greater than the respective largest value. The Length and Height plot of Female turtle is fairly normally distributed with median at the centre.For the males, length and height shows left skewness whereas width shows right skewness.
+
